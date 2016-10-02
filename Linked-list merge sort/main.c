@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 typedef struct __LIST{
   int value;
@@ -13,20 +14,27 @@ list *cut(list *orig,int cutSize);
 int llsize(list *head);
 list *append(list *head,int new);
 void print_list(list *p_head);
+static double diff_in_second(struct timespec t1, struct timespec t2);
 
 int main(void){
   list *head = NULL;
+  struct timespec start, end;
   // Append list (Test here)
-  for(int i=0;i<11;i++){
-    head = append(head,11-i);
+  srand(time(NULL));
+  for(int i=0;i<10000;i++){
+    head = append(head,rand()%100);
   }
   // First view
   print_list(head);
   // Split up and sort
+  clock_gettime(CLOCK_REALTIME, &start);
   if(llsize(head)>=2)
     head = cut_sort(head);
+  clock_gettime(CLOCK_REALTIME, &end);
   // View result
   print_list(head);
+
+  printf("Total time is %lf\n",diff_in_second(start, end));
 }
 
 list *cut_sort(list *each_head){
@@ -113,4 +121,18 @@ void print_list(list *p_head){
     printf("Value in list: %d\n",p_head->value);
     p_head = p_head->next;
   }
+  printf("\n");
+}
+
+static double diff_in_second(struct timespec t1, struct timespec t2)
+{
+    struct timespec diff;
+    if (t2.tv_nsec-t1.tv_nsec < 0) {
+        diff.tv_sec  = t2.tv_sec - t1.tv_sec - 1;
+        diff.tv_nsec = t2.tv_nsec - t1.tv_nsec + 1000000000;
+    } else {
+        diff.tv_sec  = t2.tv_sec - t1.tv_sec;
+        diff.tv_nsec = t2.tv_nsec - t1.tv_nsec;
+    }
+    return (diff.tv_sec + diff.tv_nsec / 1000000000.0);
 }
