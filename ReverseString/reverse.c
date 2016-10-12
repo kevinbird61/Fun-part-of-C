@@ -3,6 +3,7 @@
 #include <string.h>
 
 void swap_char(char *a,char *b){
+  printf("a: %d , b: %d\n",a,b);
   *a ^= *b;
   *b ^= *a;
   *a ^= *b;
