@@ -14,19 +14,25 @@ BMPHEADER bmpHeader;
 BMPINFO bmpInfo;
 RGBTRIPLE *BMPSaveData = NULL;
 RGBTRIPLE *BMPData = NULL;
+unsigned char *color_r;
+unsigned char *color_g;
+unsigned char *color_b;
 /*********************************************************/
 /* Function declaration：
 /*  readBMP    ： read the source bmp data , and store data into BMPSaveData
 /*  saveBMP    ： write the BMPSaveData into output file , which is also .bmp
 /*  fetchloc   :  get the element which is on (X,Y)
 /*  swap       ： swap 2 data pointer (BMPSaveData and BMPData)
-/*  **alloc_memory： dynamically allocate the 2D array data
+/*  **alloc_memory： dynamically allocate the 1D array data (sim. 2D)
+/*  split_structure : split the original structure to fit SSE
 /*********************************************************/
 int readBMP( char *fileName);
 int saveBMP( char *fileName);
 RGBTRIPLE fetchloc(RGBTRIPLE *arr, int Y, int X);
-void swap(RGBTRIPLE **a, RGBTRIPLE **b);
 RGBTRIPLE *alloc_memory( int Y, int X );
+void swap(RGBTRIPLE **a, RGBTRIPLE **b);
+void split_structure();
+void merge_structure(int merge_mode);
 
 int main(int argc,char *argv[])
 {
@@ -38,6 +44,21 @@ int main(int argc,char *argv[])
     printf("Read file successfully\n");
   else
     printf("Read file failed\n");
+
+#ifdef SPLIT
+  color_r = (char*)malloc(bmpInfo.biWidth*bmpInfo.biHeight*sizeof(char));
+  color_g = (char*)malloc(bmpInfo.biWidth*bmpInfo.biHeight*sizeof(char));
+  color_b = (char*)malloc(bmpInfo.biWidth*bmpInfo.biHeight*sizeof(char));
+  split_structure();
+#endif
+  // =================== Main Operation to BMP data ===================== //
+
+  // =================== Main Operation to BMP data ===================== //
+
+#ifdef SPLIT
+  merge_structure(SPLIT);
+#endif
+
   // Save Data into output file from BMPSaveData
   if ( saveBMP( outfileName ) )
     printf("Save file successfully\n");
@@ -45,6 +66,26 @@ int main(int argc,char *argv[])
     printf("Save file failed\n");
 
   return 0;
+}
+
+void split_structure(){
+  for(int i=0;i<bmpInfo.biHeight;i++){
+    for(int j=0;j<bmpInfo.biWidth;j++){
+      color_r[i*bmpInfo.biWidth+j] = BMPSaveData[i*bmpInfo.biWidth+j].rgbRed;
+      color_g[i*bmpInfo.biWidth+j] = BMPSaveData[i*bmpInfo.biWidth+j].rgbGreen;
+      color_b[i*bmpInfo.biWidth+j] = BMPSaveData[i*bmpInfo.biWidth+j].rgbBlue;
+    }
+  }
+}
+
+void merge_structure(int merge_mode){
+  for(int i=0;i<bmpInfo.biHeight;i++){
+    for(int j=0;j<bmpInfo.biWidth;j++){
+      BMPSaveData[i*bmpInfo.biWidth+j].rgbRed = color_r[i*bmpInfo.biWidth+j]*(merge_mode & 0x01);
+      BMPSaveData[i*bmpInfo.biWidth+j].rgbGreen = color_g[i*bmpInfo.biWidth+j]*(merge_mode & 0x02);
+      BMPSaveData[i*bmpInfo.biWidth+j].rgbBlue = color_b[i*bmpInfo.biWidth+j]*(merge_mode & 0x04);
+    }
+  }
 }
 
 /*********************************************************/
@@ -126,14 +167,13 @@ RGBTRIPLE fetchloc(RGBTRIPLE *arr, int Y, int X){
 	return arr[bmpInfo.biWidth * Y + X ];
 }
 /*********************************************************/
-/* allocate 2D array memory                              */
+/* allocate 1D array memory                              */
 /*********************************************************/
 RGBTRIPLE *alloc_memory(int Y, int X )
 {
-	//建立長度為Y的指標陣列
+  // 2D -> 1D (column number=X , row number=Y)
 	RGBTRIPLE *temp = (RGBTRIPLE *)malloc(Y*X*sizeof(RGBTRIPLE));//new RGBTRIPLE [ Y * X ];
   memset( temp, 0, sizeof( RGBTRIPLE ) * Y * X);
-
   return temp;
 }
 /*********************************************************/
